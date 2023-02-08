@@ -11,7 +11,8 @@ import {
   PluginTransformResultArgs
 } from '../kysely-plugin.js'
 import { EncryptionTransformer } from './encryption-transformer.js'
-
+import { randomBytes } from "node:crypto"
+import { QueryId } from '../../util/query-id.js'
 export class EncryptedValue<T> implements Expression<T> {
   #value: T
 
@@ -49,7 +50,7 @@ export class EncryptionPlugin implements KyselyPlugin {
   readonly #cryptoKey: CryptoKey<string>
 
   constructor(readonly opt: EncryptionPluginOptions = {}) {
-    this.#cryptoKey = opt.cryptoKey ?? "a".repeat(32)
+    this.#cryptoKey = opt.cryptoKey ?? randomBytes(32).toString("hex")
     this.#encryptionTransformer = new EncryptionTransformer(this.#cryptoKey)
   }
 
@@ -60,12 +61,17 @@ export class EncryptionPlugin implements KyselyPlugin {
   async transformResult(
     args: PluginTransformResultArgs
   ): Promise<QueryResult<UnknownRow>> {
-    return args.result
+    const decryptedRows = args.result.rows.map(row => {
+      return Object.entries(row).map(([key, value]) => {
+        if(typeof value === "string" && value.startsWith("_encrypted")) {
+          return {[key]: this.#encryptionTransformer.decrypt(value)}
+        }
+        return { [key]: value }
+      })
+    })
+    return {...args.result, rows: decryptedRows.flat()}
   }
 
-  protected mapRow(row: UnknownRow): UnknownRow {
-    return row
-  }
 
 }
 

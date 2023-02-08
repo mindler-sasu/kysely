@@ -5,7 +5,7 @@ import { RawNode } from '../../operation-node/raw-node.js'
 import { SelectQueryNode } from '../../operation-node/select-query-node.js'
 import { ValueNode } from '../../operation-node/value-node.js'
 import { freeze } from '../../util/object-utils.js'
-import { createCipheriv, randomBytes, CipherGCM } from "crypto"
+import { createCipheriv, randomBytes, CipherGCM, createDecipheriv } from "node:crypto"
 
 
 export class EncryptionTransformer extends OperationNodeTransformer {
@@ -15,12 +15,10 @@ export class EncryptionTransformer extends OperationNodeTransformer {
     this.#cryptoKey = cryptoKey
   }
   #transformQuery<
-    T extends SelectQueryNode | InsertQueryNode | ColumnDefinitionNode
+    T extends SelectQueryNode | InsertQueryNode | ColumnDefinitionNode,
   >(node: T): T {
     
-    // if(node.kind === 'ColumnDefinitionNode' && node.encrypted){
-    //   console.log(node)
-    // }
+    
     if(node.kind === 'InsertQueryNode') {
       const newValues = (node.values as any).values.map((currNode: any) => {
         return {
@@ -40,16 +38,40 @@ export class EncryptionTransformer extends OperationNodeTransformer {
         }
       }, {})
       const newNode = { ...node, values: { ...node.values, values: newValues } }
-      // console.log((node.values as any).values[0].values.map((a: any) => a.parameters), newNode.values.values[0].values.map((a: any) => a.parameters))
       return freeze(newNode)
+    }
+    if(node.kind === 'SelectQueryNode'){
+      console.log((node.selections as any)[0].selection.column)
     }
    return freeze(node)
   }
+  decrypt = (encrypted: string) => {
+    const [_shit, __omegashit, iv, authTag, encryptedText] = encrypted.split(":");
 
+
+    const defaultEncoding = "hex";
+    const decipher = createDecipheriv(
+      "aes-256-gcm",
+      Buffer.from(this.#cryptoKey),
+      iv
+    );
+
+    decipher.setAuthTag(Buffer.from(authTag, defaultEncoding));
+
+    const dc = Buffer.concat([
+      decipher.update(Buffer.from(encryptedText, "hex")),
+      decipher.final(),
+    ]).toString("utf8");
+
+    return dc.slice(17)
+
+  }
   protected encrypt = (value: unknown) => {
-    const input = Buffer.from(JSON.stringify(value)).toString("base64")
     const iv = randomBytes(16);
+    const input = Buffer.from(`${iv.toString("hex")}:${JSON.stringify(value)}`)
+
     const cipher = createCipheriv("aes-256-gcm", Buffer.from(this.#cryptoKey), iv);
+
     const encrypted = Buffer.concat([
       cipher.update(input),
       cipher.final(),
@@ -57,17 +79,11 @@ export class EncryptionTransformer extends OperationNodeTransformer {
 
    
     const authTag = (cipher as CipherGCM).getAuthTag().toString("hex");
-
     return `_encrypted:v1:${iv.toString("hex")}:${authTag}:${encrypted}`;
-}
-
-  protected transformSelectQuery(node: SelectQueryNode): SelectQueryNode {
-    return this.#transformQuery(super.transformSelectQuery(node))
   }
+
   protected transformInsertQuery(node: InsertQueryNode): InsertQueryNode {
     return super.transformInsertQuery(this.#transformQuery(node))
   }
-  protected transformColumnDefinition(node: ColumnDefinitionNode): ColumnDefinitionNode {
-    return this.#transformQuery(super.transformColumnDefinition(node))
-  }
+
 }
