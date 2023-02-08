@@ -19,6 +19,7 @@
   },
   "scripts": {
     "clean": "rm -rf dist && rm -rf test/node/dist && rm -rf test/browser/bundle.js",
+    "test:enc": "npm run clean && npm run build:cjs && npm run script:copy-interface-doc && npm run test:node:build && mocha --timeout 15000 test/node/dist/**/encryption.test.js && npm run test:typings && npm run test:esmimports",
     "test": "npm run clean && npm run build:cjs && npm run script:copy-interface-doc && npm run test:node:build && npm run test:node && npm run test:typings && npm run test:esmimports",
     "test:node:build": "rm -rf test/node/dist && tsc -p test/node",
     "test:node": "mocha --timeout 15000 test/node/dist/**/*.test.js",
