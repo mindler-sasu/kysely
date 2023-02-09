@@ -45,7 +45,7 @@ for (const dialect of ["postgres"] as const) {
       await createTableWithId(encryptionDb.schema, dialect, 'encryption_person')
         .addColumn('first_name', 'varchar(255)')
         .addColumn('last_name', 'varchar(255)')
-        .addColumn('salary', 'varchar(255)')
+        .addColumn('salary', 'jsonb')
         .addColumn('preferences', 'json')
         .execute()
     })
@@ -88,18 +88,18 @@ for (const dialect of ["postgres"] as const) {
         last_name: 'Barson',
         salary: new EncryptedValue(1)})
         
-      const encrypted1 = "_encrypted:v1:aaaaaaaaaaaaaaaa:1e23c6c8b6a4910fde7bba5fdf0fa8ca:fe84bdcbafb2b55e16bc2734d6258d1de776"
+      const encrypted1 = "{\"_e\":true,\"h\":{\"v\":1,\"iv\":\"aaaaaaaaaaaaaaaa\",\"at\":\"1e23c6c8b6a4910fde7bba5fdf0fa8ca\"},\"p\":\"fe84bdcbafb2b55e16bc2734d6258d1de776\"}"
       testSql(query, dialect, {
         postgres: {
-          sql: 'insert into "encryption_person" ("first_name", "last_name", "salary") values ($1, $2, $3)',
+          sql: 'insert into "encryption_person" ("first_name", "last_name", "salary") values ($1, $2, CAST($3 AS JSONB))',
           parameters: ['Foo', 'Barson', encrypted1],
         },
         mysql: {   
-          sql: 'insert into "encryption_person" ("first_name", "last_name", "salary") values ($1, $2, $3)',
+          sql: 'insert into "encryption_person" ("first_name", "last_name", "salary") values ($1, $2, CAST($3 AS JSONB))',
           parameters: ['Foo', 'Barson', encrypted1]
         },
         sqlite: {
-          sql: 'insert into "encryption_person" ("first_name", "last_name", "salary") values ($1, $2, $3)',
+          sql: 'insert into "encryption_person" ("first_name", "last_name", "salary") values ($1, $2, CAST($3 AS JSONB))',
           parameters: ['Foo', 'Barson', encrypted1],
         }
       })
@@ -110,42 +110,43 @@ for (const dialect of ["postgres"] as const) {
         last_name: 'Barson',
         salary: new EncryptedValue(3)
       })
-      const encrypted3 =  "_encrypted:v1:aaaaaaaaaaaaaaaa:8baa95c674c7ad50fcc092f9c40ca41a:fe84bdcbafb2b55e16bc2734d6258d1de774"
+      const encrypted3 = "{\"_e\":true,\"h\":{\"v\":1,\"iv\":\"aaaaaaaaaaaaaaaa\",\"at\":\"8baa95c674c7ad50fcc092f9c40ca41a\"},\"p\":\"fe84bdcbafb2b55e16bc2734d6258d1de774\"}"
+ 
  
       testSql(query, dialect, {
         postgres: {
-          sql: 'insert into "encryption_person" ("first_name", "last_name", "salary") values ($1, $2, $3)',
+          sql: 'insert into "encryption_person" ("first_name", "last_name", "salary") values ($1, $2, CAST($3 AS JSONB))',
           parameters: ['Foo', 'Barson', encrypted3],
         },
         mysql: {   
-          sql: 'insert into "encryption_person" ("first_name", "last_name", "salary") values ($1, $2, $3)',
+          sql: 'insert into "encryption_person" ("first_name", "last_name", "salary") values ($1, $2, CAST($3 AS JSONB))',
           parameters: ['Foo', 'Barson', encrypted3]
         },
         sqlite: {
-          sql: 'insert into "encryption_person" ("first_name", "last_name", "salary") values ($1, $2, $3)',
+          sql: 'insert into "encryption_person" ("first_name", "last_name", "salary") values ($1, $2, CAST($3 AS JSONB))',
           parameters: ['Foo', 'Barson', encrypted3],
         }
       })
     })
-    it.only('should decrypt when selected', async () => {
+    it('should decrypt when selected', async () => {
       const query = encryptionDb.insertInto('encryption_person').values({
         first_name: 'Dobby',
         last_name: 'Barson',
         salary: new EncryptedValue(3)
       })
-      const encrypted3 = "_encrypted:v1:aaaaaaaaaaaaaaaa:8baa95c674c7ad50fcc092f9c40ca41a:fe84bdcbafb2b55e16bc2734d6258d1de774"
+      const encrypted3 = "{\"_e\":true,\"h\":{\"v\":1,\"iv\":\"aaaaaaaaaaaaaaaa\",\"at\":\"8baa95c674c7ad50fcc092f9c40ca41a\"},\"p\":\"fe84bdcbafb2b55e16bc2734d6258d1de774\"}"
  
       testSql(query, dialect, {
         postgres: {
-          sql: 'insert into "encryption_person" ("first_name", "last_name", "salary") values ($1, $2, $3)',
+          sql: 'insert into "encryption_person" ("first_name", "last_name", "salary") values ($1, $2, CAST($3 AS JSONB))',
           parameters: ['Dobby', 'Barson', encrypted3],
         },
         mysql: {   
-          sql: 'insert into "encryption_person" ("first_name", "last_name", "salary") values ($1, $2, $3)',
+          sql: 'insert into "encryption_person" ("first_name", "last_name", "salary") values ($1, $2, CAST($3 AS JSONB))',
           parameters: ['Dobby', 'Barson', encrypted3]
         },
         sqlite: {
-          sql: 'insert into "encryption_person" ("first_name", "last_name", "salary") values ($1, $2, $3)',
+          sql: 'insert into "encryption_person" ("first_name", "last_name", "salary") values ($1, $2, CAST($3 AS JSONB))',
           parameters: ['Dobby', 'Barson', encrypted3],
         }
       })

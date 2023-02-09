@@ -7,7 +7,7 @@ import { ValueNode } from '../../operation-node/value-node.js'
 import { freeze } from '../../util/object-utils.js'
 import { createCipheriv, randomBytes, CipherGCM, createDecipheriv } from "node:crypto"
 
-
+export type EncryptedPayload =  { p: string, h: { v: number, at: string, iv: string }}
 export class EncryptionTransformer extends OperationNodeTransformer {
   #cryptoKey: string
   constructor(cryptoKey:string) {
@@ -27,7 +27,7 @@ export class EncryptionTransformer extends OperationNodeTransformer {
             if (valueNode.kind === "RawNode"){
               const encryptedParameters = valueNode.parameters.map((param: any) => {
                 if(param.value.__encrypted) {
-                  return {...param, value: this.encrypt(param.value.value)}
+                  return {...param, value: JSON.stringify(this.encrypt(param.value.value))}
                 }
                 return param
               })
@@ -45,9 +45,13 @@ export class EncryptionTransformer extends OperationNodeTransformer {
     }
    return freeze(node)
   }
-  decrypt = (encrypted: string) => {
-    const [_shit, __omegashit, iv, authTag, encryptedText] = encrypted.split(":");
-
+  decrypt = (encrypted: EncryptedPayload) => {
+    const {
+      iv,
+      at: authTag,
+    } = encrypted.h;
+    
+    const encryptedText = encrypted.p
 
     const defaultEncoding = "hex";
     const decipher = createDecipheriv(
@@ -79,7 +83,16 @@ export class EncryptionTransformer extends OperationNodeTransformer {
 
    
     const authTag = (cipher as CipherGCM).getAuthTag().toString("hex");
-    return `_encrypted:v1:${iv.toString("hex")}:${authTag}:${encrypted}`;
+    const encryptedPayload = {
+      _e: true,
+      h: {
+        v: 1,
+        iv: iv.toString("hex"),
+        at: authTag,
+      },
+      p: encrypted
+    }
+    return encryptedPayload;
   }
 
   protected transformInsertQuery(node: InsertQueryNode): InsertQueryNode {
