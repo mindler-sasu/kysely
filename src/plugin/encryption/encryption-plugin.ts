@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto"
 import { QueryResult } from '../../driver/database-connection.js'
 import { Expression } from '../../expression/expression.js'
 import { OperationNode } from '../../operation-node/operation-node.js'
@@ -10,9 +11,7 @@ import {
   PluginTransformQueryArgs,
   PluginTransformResultArgs
 } from '../kysely-plugin.js'
-import { EncryptionTransformer } from './encryption-transformer.js'
-import { randomBytes } from "node:crypto"
-import { QueryId } from '../../util/query-id.js'
+import { EncryptedPayload, EncryptionTransformer } from './encryption-transformer.js'
 export class EncryptedValue<T> implements Expression<T> {
   #value: T
 
@@ -29,7 +28,7 @@ export class EncryptedValue<T> implements Expression<T> {
   toOperationNode(): OperationNode {
     // Most of the time you can use the `sql` template tag to build the returned node. 
     // The `sql` template tag takes care of passing the `json` string as a parameter, alongside the sql string, to the DB.
-    return RawNode.create(['',''], [ValueNode.create({ __encrypted: true, value: this.#value })])
+    return RawNode.create(['CAST(',' AS JSONB)'], [ValueNode.create({ __encrypted: true, value: this.#value })])
   }
 }
 export interface EncryptionPluginOptions {
@@ -61,10 +60,11 @@ export class EncryptionPlugin implements KyselyPlugin {
   async transformResult(
     args: PluginTransformResultArgs
   ): Promise<QueryResult<UnknownRow>> {
+
     const decryptedRows = args.result.rows.map(row => {
       return Object.entries(row).map(([key, value]) => {
-        if(typeof value === "string" && value.startsWith("_encrypted")) {
-          return {[key]: this.#encryptionTransformer.decrypt(value)}
+        if(typeof value === "object" && value !== null && (value as any)._e) {
+          return {[key]: this.#encryptionTransformer.decrypt(value as EncryptedPayload)}
         }
         return { [key]: value }
       })
