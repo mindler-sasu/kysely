@@ -63,7 +63,7 @@ export class EncryptionTransformer extends OperationNodeTransformer {
       decipher.final(),
     ]).toString("utf8");
 
-    return dc.slice(17)
+    return JSON.parse(dc.slice(17))
 
   }
   protected encrypt = (value: unknown) => {

@@ -127,7 +127,7 @@ for (const dialect of ["postgres"] as const) {
         }
       })
     })
-    it('should decrypt when selected', async () => {
+    it.only('should decrypt when selected', async () => {
       const query = encryptionDb.insertInto('encryption_person').values({
         first_name: 'Dobby',
         last_name: 'Barson',
@@ -156,7 +156,7 @@ for (const dialect of ["postgres"] as const) {
         .where("encryption_person.first_name", "=","Dobby")
         .executeTakeFirst()
 
-      expect(selected?.salary).to.eq('3') // TODO: fisk AssertionError: expected '3' to equal 3 :<
+      expect(selected?.salary).to.eq(3)
     })
   })
 }
